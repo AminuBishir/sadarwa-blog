@@ -1,0 +1,21 @@
+<html>
+	<head>
+		<title>Blog</title>
+	</head>
+	<body>
+		<center><h1>Sadarwa -Blog</h1> <a href="http://localhost:13081/new_post">Add new Post</a></center>
+		
+		<hr>
+		{% for blog in blog_posts %}
+			<center>
+				<div><h3 style="font-family:sans-serif,Time New Roman, courier; text-decoration:underline,bold; margin-left:5%; text-align:left">{{blog.subject}}</h3></div>
+				<div><img href="images/{{img}}" width="40%" height="35%" alt="Img here"/></div>
+				<p style="text-align:left; text-decoration:bold; margin-left:5%"></p>
+				<div style="margin: 3% 20% 10% 5%; text-align:justify"><font style="font-weight:bold; padding-bottom:20px; font-size12px; font-family:courier;">Published {{blog.created.date()}} </font> <br>{{blog.content |safe}} <br><br>{{blog.key().id()}}</div>
+			</center>
+			
+		{% endfor %}
+		
+	</body>
+
+</html>
