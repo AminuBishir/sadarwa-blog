@@ -1,13 +1,5 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>Sign up</title>
-		<style>
-		.red_text{
-		color:red;
-		}
-		</style>
-	</head>
+{% extends 'base.html' %}
+	{% block body %}
 	<body>
 		<div style="margin:20%; width:auto; height:auto; background-color:#eee">
 		<form method="post" action="signup">
@@ -65,5 +57,4 @@
 			</table>
 			</form>
 		</div>
-	</body>
-</html>
+	{% endblock %}
