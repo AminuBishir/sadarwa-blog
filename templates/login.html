@@ -1,9 +1,5 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>Sadarwa -Login</title>
-	</head>
-	<body>
+{% extends 'base.html' %}
+	{% block body %}
 	<center style="margin-top:15%">
 		<form method="post">
 			<h4 style="font-family:courier; color:red">{{error}}</h4>
@@ -19,5 +15,4 @@
 		</form>
 	</center>
 	
-	</body>
-</html>
+	{% endblock %}
