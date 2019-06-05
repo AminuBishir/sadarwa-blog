@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Sign up</title>
+		<style>
+		.red_text{
+		color:red;
+		}
+		</style>
+	</head>
+	<body>
+		<div style="margin:20%; width:auto; height:auto; background-color:#eee">
+		<form method="post" action="signup">
+			<table>
+			<tr>
+			<td><label>Username:</label>
+			</td>
+			<td>
+			<input type="text" name="username">
+			</td>
+			<td>
+			<label name="user_err" class="red_text">{{user_err}}</label>
+			</td>
+			</tr>
+
+			<tr>
+			<td>
+			<label>Password:</label>
+			</td>
+			<td>
+			<input type="password" name="userpass">
+			</td>
+			<td>
+			<label name="pass_err" class="red_text"></label>
+			</td>
+			</tr>
+
+			<tr>
+			<td>
+			<label>Confirm Password:</label></td>
+			<td>
+			<input type="password" name="confirm">
+			</td>
+			<td>
+			<label name="confirm_err" class="red_text">{{confirm_err}}</label>
+			</td>
+			</tr>
+			<tr>
+			<td>
+			<label>Email:</label>
+			</td>
+			<td>
+			<input type="text" name="email">
+			</td>
+			<td>
+			<label name="email_err" class="red_text">{{email_err}}</label>
+			</td>
+			</tr>
+			<tr>
+			<td></td>
+			<td><input type="submit" value="Sign Up"><br>
+			<font style="font-family:Sans-serif; font-size:12px;">Already have an account? <a href="http://localhost:10081/login">Click here </a>to login</font></td>
+			</tr>
+
+			</table>
+			</form>
+		</div>
+	</body>
+</html>
