@@ -1,9 +1,15 @@
 {% extends 'base.html' %}
 	{% block body %}
-		<center><h1>Sadarwa -Blog</h1> <a href="http://localhost:15081/new_post">Add new Post</a></center>
-		
+		<center><h1>Sadarwa -Blog</h1>
+			{% if login %} 
+			<a href="http://localhost:15081/new_post">Add new Post</a>
+			<div align="left"><h4>Welcome {{user}}</h4><a href="http://localhost:15081/logout">Logout</a></div>
+			{% endif %}
+		</center>
 		<hr>
+		<img src="/static/image/logo.png" width="100px" height="100px" alt="img"/>
 		{% for blog in blog_posts %}
+			
 			<center>
 				<div><h3 style="font-family:sans-serif,Time New Roman, courier; text-decoration:underline,bold; margin-left:5%; text-align:left">{{blog.subject}}</h3></div>
 				<div><img href="images/{{img}}" width="40%" height="35%" alt="Img here"/></div>

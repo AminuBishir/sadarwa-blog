@@ -1,19 +1,28 @@
 {% extends 'base.html' %}
 	{% block body %}
-		<div>
-			<form method="post">
-			<label>
-			<div>Title:</div>
-			<input type="text" name="subject" value="{{subject}}">
-			</label><br>
-			<label>
-			<div>Content:</div>
-			<textarea rows="10" cols="50" name="content">{{content}}</textarea>
-			</label>
+		<div class="container">
 		
-			<label>{{error}}</label>
-			<div><input type="submit" value="Publish"></div>
-			
-			</form>
+		
+			<div class="row">
+				
+				<div class="col-4 align-self-center">
+					<form method="post" class="form">
+					<label>
+					<div>Title:</div>
+					<input type="text" class="form-control" name="subject" value="{{subject}}">
+					</label><br>
+					<label>
+					<div>Content:</div>
+					<textarea rows="10" cols="100" name="content">{{content}}</textarea>
+					</label>
+				
+					<label class="alert alert-warning " role="alert" >{{error}}</label>
+					<div><button type="submit" class="btn btn-default form-control">Publish</button></div>
+					
+					
+					</form>
+				</div>
+				
+			</div>
 		</div>
 	{% endblock %}
