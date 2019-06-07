@@ -4,6 +4,7 @@ import os
 import hmac
 import hashlib
 import string
+import re
 import random
 from google.appengine.ext import db
 
@@ -34,27 +35,29 @@ class Handler(webapp2.RequestHandler):
 	
 	#convenience functions for creating and verifying cookie
 	def make_secure_cookie(self,name,user_id):
-		return self.response.headers.add_header('Set-Cookies','%s=%s, path=/' %(name,set_secure_val(user_id)))
-	def check_secure_cookie(self,secure_cookie):
-		val = secure_cookie.split('|')[0]
-		return val and check_secure_val(val)
+		return self.response.headers.add_header('Set-Cookie','%s=%s; path=/' %(name,set_secure_val(user_id)))
+	def check_secure_cookie(self,name):
+		secure_cookie = self.request.cookies.get(name)
+		return secure_cookie and check_secure_val(secure_cookie)
 	
 	#convenience functions for hashing password
-	def make_salt(length=5):
+	def make_salt(self,length=5):
 		return ''.join(random.choice(letters) for x in xrange(length))
 	def make_pw_hash(self,name,password, salt=None):
 		if not salt:
-			salt = make_salt()
+			salt = self.make_salt()
 		return '%s,%s' %(salt,hashlib.sha256(name + password + salt).hexdigest())
 	def valid_pw(self,name,password,hash):
 		salt = hash.split(',')[0]
-		return salt and hash == make_pw_hash(name,password,salt)
+		return salt and hash == self.make_pw_hash(name,password,salt)
 def blog_key(name='default'):
 	return db.Key.from_path('blogs',name)
 
 #parent key for users
 def user_key(name='user-parent'):
 	return db.Key.from_path('users',name)
+def comment_key(name='comment'):
+	return db.Key.from_path('comment',name)
 class Blog(db.Model):
 	
 	id = db.IntegerProperty()
@@ -62,7 +65,7 @@ class Blog(db.Model):
 	content = db.TextProperty(required=True)
 	created = db.DateTimeProperty(auto_now_add = True)
 	last_modified = db.DateTimeProperty(auto_now = True)
-	author_id = db.StringProperty(required =True)
+	author = db.ReferenceProperty(User)
 	
 	def by_id(self,blog_id):
 		return self.get_by_id(blog_id)
@@ -72,13 +75,23 @@ class Blog(db.Model):
 		self._render_text = self.content.replace('\n','<br>')
 		return render('post.htm', p=self)
 
-class Users(db.Model):
+class User(db.Model):
 	
 	name = db.StringProperty(required = True)
 	password = db.StringProperty(required = True)
 	email = db.StringProperty(required = True)
 	def by_id(self,uid):
 		return self.get_by_id(uid)
+class Comment(db.Model):
+	post_id = db.StringProperty(required=True)
+	commentor_id = db.StringProperty(required = True)
+	comment = db.TextProperty(required=True)
+	date = db.DateTimeProperty(auto_now_add = True)
+	
+class Like(db.Model):
+	post_id = db.StringProperty(required = True)
+	liked_by = db.StringProperty(required = True)
+	date_like = db.DateTimeProperty(auto_now_add = True)
 	
 
 class MainHandler(Handler):
@@ -90,15 +103,20 @@ class BlogHandler(Handler):
 	def get(self):
 		#query the available blogs
 		blogs = db.GqlQuery('SELECT * FROM Blog ORDER BY created DESC LIMIT 10 ')
-		self.render('blog.html',blog_posts=blogs)
+		cookie = self.request.cookies.get('user_id')
+		if cookie:
+			uid = cookie.split('|')[0]
+			user = User.get_by_id(int(uid),parent=user_key())
+			self.render('blog.html',blog_posts=blogs, user=user.name, login=True)
+		else:
+			self.render('blog.html',blog_posts=blogs)
 class Signup(Handler):
 	def get(self):
 		self.render('signup.html')
-class LoginHandler(Handler):
 	def post(self):
 		
 		#get params from request
-		global username
+		
 		username = self.request.get("username")
 		password = self.request.get("userpass")
 		confirm = self.request.get("confirm")
@@ -128,18 +146,40 @@ class LoginHandler(Handler):
 					user = User(parent=user_key(),name=username, email=email,password=self.make_pw_hash(username,password))
 					
 					user.put()
-					self.set_secure_cookie('user_id',user.key().id())
-					self.redirect('welcome')
+					self.make_secure_cookie('user_id',user.key().id())
+					self.redirect('blog')
 		else:
 			user_err="Username already exists!"
 			self.render('signup.html',user_err=user_err,confirm_err="",email_err="")
+class LoginHandler(Handler):
+	def get(self):
+		self.render('login.html',error='')
+	def post(self):
+		username = self.request.get('username')
+		password = self.request.get('password')
+		
+		user = db.GqlQuery('SELECT * FROM User WHERE name = :user', user=username)
+		if user.get():
+			if (self.valid_pw(username,password,user.get().password)):
+				cookie = self.make_secure_cookie('user_id',str(user.get().key().id()))
+				self.render('blog.html', user=user.get().name, login=True)
+			else:
+				self.render('login.html',error='Invalid Password!')
+		else:
+			self.render('login.html',error='User does not exist!')
 
-
+class Logout(Handler):
+	def get(self):
+		self.response.headers.add_header('Set-Cookie','user_id =; path=/')
+		self.redirect('blog')
 	
 class NewPost(Handler):
+	cookie = self.request.cookies.get('user_id')
 	def new_post(self,subject="",content="",error=""):
-		
-		self.render("new_post.html",subject=subject,content=content,error=error)
+		if self.check_secure_cookie('user_id'):
+			self.render("new_post.html",subject=subject,content=content,error=error)
+		else:
+			self.render('login.html',error='Please login to continue')
 	def get(self):
 		if self.check_secure_cookie('user_id'):
 		
@@ -148,17 +188,19 @@ class NewPost(Handler):
 			self.render('login.html',error='Please login to continue')
 		
 	def post(self):
-		
-		subject = self.request.get("subject")
-		content = self.request.get("content")
-		content = content.replace('\n','<br>')
-		if subject and content:
-			blog = Blog(parent=blog_key(),subject=subject,content=content)
-			blog.put()
-			self.redirect('/blog/%s' % str(blog.key().id()))
-		else:
-			error = "Sorry, no field can be left empty!"
-			self.new_post(subject,content,error)
+		if cookie:
+			subject = self.request.get("subject")
+			content = self.request.get("content")
+			content = content.replace('\n','<br>')
+			if subject and content:
+				
+				blog = Blog(parent=blog_key(),subject=subject,content=content,author=User.get_by_id(int(cookie.split('|')[0])))
+				blog.put()
+				self.redirect('/blog/%s' % str(blog.key().id()))
+			else:
+				error = "Sorry, no field can be left empty!"
+				self.new_post(subject,content,error)
+		self.render('login.html',error='Please login to continue')
 
 class BlogPage(BlogHandler):
 	def get(self,post_id):
@@ -180,7 +222,28 @@ class PostPage(BlogHandler):
             return
 
         self.render("post.html", post = post)
+	
 '''
+def check_empty(self,input):
+	if not input:
+		return "This field cannot be empty!"
+	else:
+		return ""
+def confirmPass(self,pass1,pass2):
+	if(pass1 == pass2):
+		return ""
+	else:
+		return "Passwords do not match!"
+def check_username(self,input):
+	if ((" " in input) or len(input)<3):
+		return "Invalid Username!"
+	else:
+		return ""
+def validate_email(self,email):
+	if re.match("^.+@(\[?)[a-zA-Z0-9-.]+.([a-zA-Z]{2,3}|[0-9]{1,3})(]?)$", email) or not email:
+		return ""
+	else:
+		return "Invalid email address!"
 app = webapp2.WSGIApplication([
-    ('/', MainHandler),('/blog',BlogHandler),('/new_post',NewPost),('/blog/([0-9]+)',BlogPage),('/login',LoginHandler),('signup',Signup)
+    ('/', MainHandler),('/blog',BlogHandler),('/new_post',NewPost),('/blog/([0-9]+)',BlogPage),('/login',LoginHandler),('/signup',Signup),('/logout',Logout)
 ], debug=True)

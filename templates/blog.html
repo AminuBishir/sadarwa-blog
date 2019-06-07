@@ -4,7 +4,10 @@
 			{% if login %} 
 			<a href="http://localhost:15081/new_post">Add new Post</a>
 			<div align="left"><h4>Welcome {{user}}</h4><a href="http://localhost:15081/logout">Logout</a></div>
-			{% endif %}
+			
+			{% else %}
+			 <div><a href="http://localhost:15081/login">Login</a></div>
+			 {% endif %}
 		</center>
 		<hr>
 		<img src="/static/image/logo.png" width="100px" height="100px" alt="img"/>
