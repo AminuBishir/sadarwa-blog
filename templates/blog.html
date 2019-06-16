@@ -10,17 +10,73 @@
 			 {% endif %}
 		</center>
 		<hr>
-		<img src="/static/image/logo.png" width="100px" height="100px" alt="img"/>
-		{% for blog in blog_posts %}
+		<div class="container-fluid">
+			<div class="row">
 			
-			<center>
-				<div><h3 style="font-family:sans-serif,Time New Roman, courier; text-decoration:underline,bold; margin-left:5%; text-align:left">{{blog.subject}}</h3></div>
-				<div><img href="images/{{img}}" width="40%" height="35%" alt="Img here"/></div>
-				<p style="text-align:left; text-decoration:bold; margin-left:5%"></p>
-				<div style="margin: 3% 20% 10% 5%; text-align:justify"><font style="font-weight:bold; padding-bottom:20px; font-size12px; font-family:courier;">Published {{blog.created.date()}} </font> <br>{{blog.content |safe}} <br><br>{{blog.key().id()}}</div>
-			</center>
+				<div class="col-md-8">
+					
+					
+						
+						<center>
+							<div><h3 style="font-family:sans-serif,Time New Roman, courier; text-decoration:underline,bold; margin-left:5%; text-align:left">{{blog_posts[0].subject}}</h3></div>
+							<div><img href="images/{{img}}" width="40%" height="35%" alt="Img here"/></div>
+							<p style="text-align:left; text-decoration:bold; margin-left:5%"></p>
+							<div style="margin: 3% 20% 10% 5%; text-align:justify"><font style="font-weight:bold; padding-bottom:20px; font-size12px; font-family:courier;">Published on {{blog_posts[0].created.date()}} by {{blog_posts[0].author}} </font> <br>{{blog_posts[0].content |safe}} </div>
+							{% if login %} 
+							<div class="form-group" style="width:30%">
+								<form method="post" class="form">
+								<input type="hidden" class="form-control" name="post_id" value="{{blog_posts[0].key().id()}}">
+								<input type="text" class="form-control" placeholder="comment..." name="comment"><button type="submit" class="btn btn-primary">Comment</button>
+								
+								</form>
+							
+							</div>
+							
+							{% endif %}
+							{% if comments %}
+							<div style="width:50%; text-align:left;">
+								<ul class="list-group">
+								
+								{% for comment in comments %}
+								
+								<li class="list-group-item" style="margin-bottom:10px">
+								<h5 style="color:blue">{{comment.commentor.name}}</h5>
+								<font style="margin-left:5px">{{comment.comment}}</font>
+								</li>
+								{% endfor %}
+								
+								
+								</ul>	
+							</div>
+							{% endif %}
+							
+				</div>
+						</center>
+						
+					
+					<div class="col-md-4">
+					<center><h3>Recent Post</h3></center>
+					<br>
+					<ul class="list-group">
+					{% for blog in blog_posts %}
+						
+						
+						
+							<li class="list-group-item">
+							
+							<a href="http://localhost:15081/blog/{{blog.key().id()}}">{{blog.subject}}</a>
+							</li>
+						
+					{% endfor %}
+						</ul>
+						
+			</div>
+				</div>
+				
+				
 			
-		{% endfor %}
+		</div>
+		
 		{% endblock %}
 		
 	

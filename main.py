@@ -14,12 +14,12 @@ jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir),auto
 #secret key for creating values
 secret_key = '0!`~|+=_(*%:?>,$@-19'
 
-#letter to used in creating salt
+#letter to be used in creating salt
 letters = string.ascii_letters
 
 #convenience function for setting and validating values
 def set_secure_val(val):
-	return '%s|%s' %(val,hmac.new(secret_key,val).hexdigest())
+	return '%s|%s' %(val,hmac.new(secret_key,str(val)).hexdigest())
 
 def check_secure_val(secure_val):
 	val = secure_val.split('|')[0]
@@ -58,22 +58,7 @@ def user_key(name='user-parent'):
 	return db.Key.from_path('users',name)
 def comment_key(name='comment'):
 	return db.Key.from_path('comment',name)
-class Blog(db.Model):
-	
-	id = db.IntegerProperty()
-	subject = db.StringProperty(required=True)
-	content = db.TextProperty(required=True)
-	created = db.DateTimeProperty(auto_now_add = True)
-	last_modified = db.DateTimeProperty(auto_now = True)
-	author = db.ReferenceProperty(User)
-	
-	def by_id(self,blog_id):
-		return self.get_by_id(blog_id)
-	
-	
-	def render(self):
-		self._render_text = self.content.replace('\n','<br>')
-		return render('post.htm', p=self)
+
 
 class User(db.Model):
 	
@@ -82,15 +67,33 @@ class User(db.Model):
 	email = db.StringProperty(required = True)
 	def by_id(self,uid):
 		return self.get_by_id(uid)
+class Blog(db.Model):
+	
+	id = db.IntegerProperty()
+	subject = db.StringProperty(required=True)
+	content = db.TextProperty(required=True)
+	created = db.DateTimeProperty(auto_now_add = True)
+	last_modified = db.DateTimeProperty(auto_now = True)
+	author = db.StringProperty()
+	
+	def by_id(self,blog_id):
+		return self.get_by_id(blog_id)
+	
+	
+	def render(self):
+		self._render_text = self.content.replace('\n','<br>')
+		return render('post.htm', p=self)
 class Comment(db.Model):
 	post_id = db.StringProperty(required=True)
+	commentor = db.ReferenceProperty(User)
 	commentor_id = db.StringProperty(required = True)
 	comment = db.TextProperty(required=True)
 	date = db.DateTimeProperty(auto_now_add = True)
 	
 class Like(db.Model):
 	post_id = db.StringProperty(required = True)
-	liked_by = db.StringProperty(required = True)
+	liked_by_id = db.StringProperty(required = True)
+	liked_by = db.ReferenceProperty(User)
 	date_like = db.DateTimeProperty(auto_now_add = True)
 	
 
@@ -100,16 +103,35 @@ class MainHandler(Handler):
 		self.redirect('/blog')
 
 class BlogHandler(Handler):
-	def get(self):
+	def post_to_blog(self,comment=None):
 		#query the available blogs
 		blogs = db.GqlQuery('SELECT * FROM Blog ORDER BY created DESC LIMIT 10 ')
+		comments = Comment.all().fetch(limit=10)
 		cookie = self.request.cookies.get('user_id')
 		if cookie:
 			uid = cookie.split('|')[0]
 			user = User.get_by_id(int(uid),parent=user_key())
-			self.render('blog.html',blog_posts=blogs, user=user.name, login=True)
+			self.render('blog.html',blog_posts=blogs, user=user.name, login=True,comments = comments)
 		else:
-			self.render('blog.html',blog_posts=blogs)
+			self.render('blog.html',blog_posts=blogs,comments = comments)
+	def get(self):
+		self.post_to_blog()
+	def post(self):
+		comment = self.request.get('comment')
+		id_post = self.request.get('post_id')
+		if comment:
+			cookie = self.request.cookies.get('user_id')
+			uid = cookie.split('|')[0]
+			commentor = User.get_by_id(int(uid) ,parent=user_key())
+			if id_post:
+				cmnt = Comment(parent=comment_key(),commentor=commentor,commentor_id=uid, comment = comment, post_id = id_post)
+				cmnt.put()
+				load_comments = db.GqlQuery('SELECT * FROM Comment ORDER BY date DESC LIMIT 10 ')
+				self.post_to_blog(load_comments)
+			else:
+				self.post_to_blog();
+		else:
+			pass
 class Signup(Handler):
 	def get(self):
 		self.render('signup.html')
@@ -162,7 +184,7 @@ class LoginHandler(Handler):
 		if user.get():
 			if (self.valid_pw(username,password,user.get().password)):
 				cookie = self.make_secure_cookie('user_id',str(user.get().key().id()))
-				self.render('blog.html', user=user.get().name, login=True)
+				self.render('blog.html', blog_posts = Blog.all(),user=user.get().name, login=True)
 			else:
 				self.render('login.html',error='Invalid Password!')
 		else:
@@ -174,7 +196,7 @@ class Logout(Handler):
 		self.redirect('blog')
 	
 class NewPost(Handler):
-	cookie = self.request.cookies.get('user_id')
+	
 	def new_post(self,subject="",content="",error=""):
 		if self.check_secure_cookie('user_id'):
 			self.render("new_post.html",subject=subject,content=content,error=error)
@@ -188,13 +210,14 @@ class NewPost(Handler):
 			self.render('login.html',error='Please login to continue')
 		
 	def post(self):
+		cookie = self.request.cookies.get('user_id')
 		if cookie:
 			subject = self.request.get("subject")
 			content = self.request.get("content")
 			content = content.replace('\n','<br>')
 			if subject and content:
 				
-				blog = Blog(parent=blog_key(),subject=subject,content=content,author=User.get_by_id(int(cookie.split('|')[0])))
+				blog = Blog(parent=blog_key(),subject=subject,content=content,author=User.get_by_id(long(cookie.split('|')[0]),parent=user_key()).name)
 				blog.put()
 				self.redirect('/blog/%s' % str(blog.key().id()))
 			else:
